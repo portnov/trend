@@ -1,9 +1,7 @@
 {-# LANGUAGE UnicodeSyntax, DeriveDataTypeable #-}
 -- | Operations with dates
 module Dates
-  (parseDate, parseAbsDate,
-   pAbsDate,
-   getCurrentDateTime,
+  (parseDate, pDateTime,
    toDouble)
   where
 
@@ -17,44 +15,6 @@ import Text.ParserCombinators.Parsec
 
 import Unicode
 import Types
-
-getCurrentDateTime ∷  IO DateTime
-getCurrentDateTime = do
-  zt ← getZonedTime
-  let lt = zonedTimeToLocalTime zt
-      ld = localDay lt
-      ltod = localTimeOfDay lt
-      (y,m,d) = toGregorian ld
-      h = todHour ltod
-      min = todMin ltod
-      s = round $ todSec ltod
-  return $ DateTime (fromIntegral y) m d h min s
-
-uppercase ∷ String → String
-uppercase = map toUpper
-
-isPrefixOfI ∷  String → String → Bool
-p `isPrefixOfI` s = (uppercase p) `isPrefixOf` (uppercase s)
-
-lookupS ∷ String → [(String,a)] → Maybe a
-lookupS _ [] = Nothing
-lookupS k ((k',v):other) | k `isPrefixOfI` k' = Just v
-                         | otherwise          = lookupS k other
-
-monthsN ∷ [(String,Int)]
-monthsN = zip months [1..]
-
-lookupMonth ∷ String → Maybe Int
-lookupMonth n = lookupS n monthsN
-
-date ∷  Int → Int → Int → DateTime
-date y m d = DateTime y m d 0 0 0
-
-addTime ∷  DateTime → Time → DateTime
-addTime dt t = dt {
-                 hour = tHour t + hour dt,
-                 minute = tMinute t + minute dt,
-                 second = tSecond t + second dt }
 
 times ∷ Int → Parser t → Parser [t]
 times 0 _ = return []
@@ -85,61 +45,39 @@ pMonth = number 2 12
 pDay ∷ Parser Int
 pDay = number 2 31
 
-euroNumDate ∷ Parser DateTime
-euroNumDate = do
+euroDate ∷ Parser AnyNumber
+euroDate = do
   d ← pDay
   char '.'
   m ← pMonth
   char '.'
   y ← pYear
-  return $ date y m d
+  return $ Date y m d
 
-americanDate ∷ Parser DateTime
+americanDate ∷ Parser AnyNumber
 americanDate = do
   y ← pYear
   char '/'
   m ← pMonth
   char '/'
   d ← pDay
-  return $ date y m d
+  return $ Date y m d
 
-euroNumDate' ∷ Int → Parser DateTime
-euroNumDate' year = do
+euroDate' ∷ Int → Parser AnyNumber
+euroDate' year = do
   d ← pDay
   char '.'
   m ← pMonth
-  return $ date year m d
+  return $ Date year m d
 
-americanDate' ∷ Int → Parser DateTime
+americanDate' ∷ Int → Parser AnyNumber
 americanDate' year = do
   m ← pMonth
   char '/'
   d ← pDay
-  return $ date year m d
+  return $ Date year m d
 
-strDate ∷ Parser DateTime
-strDate = do
-  d ← pDay
-  space
-  ms ← many1 letter
-  case lookupMonth ms of
-    Nothing → fail $ "unknown month: "++ms
-    Just m  → do
-      space
-      y ← pYear
-      notFollowedBy $ char ':'
-      return $ date y m d
-
-strDate' ∷ Int → Parser DateTime
-strDate' year = do
-  d ← pDay
-  space
-  ms ← many1 letter
-  case lookupMonth ms of
-    Nothing → fail $ "unknown month: "++ms
-    Just m  → return $ date year m d
-
-time24 ∷ Parser Time
+time24 ∷ Parser AnyNumber
 time24 = do
   h ← number 2 23
   char ':'
@@ -160,7 +98,7 @@ ampm = do
     "PM" → return 12
     _ → fail "AM/PM expected"
 
-time12 ∷ Parser Time
+time12 ∷ Parser AnyNumber
 time12 = do
   h ← number 2 12
   char ':'
@@ -173,116 +111,18 @@ time12 = do
   hd ← ampm
   return $ Time (h+hd) m s
 
-pAbsDate ∷ Int → Parser DateTime
-pAbsDate year = do
-  date ← choice $ map try $ map ($ year) $ [
-                              const euroNumDate,
-                              const americanDate,
-                              const strDate,
-                              strDate',
-                              euroNumDate',
-                              americanDate']
-  optional $ char ','
-  s ← optionMaybe space
-  case s of
-    Nothing → return date
-    Just _ → do
-      t ← choice $ map try [time12,time24]
-      return $ date `addTime` t
-
-data DateIntervalType = Day | Week | Month | Year
-  deriving (Eq,Show,Read)
-
-data DateInterval = Days ℤ
-                  | Weeks ℤ
-                  | Months ℤ
-                  | Years ℤ
-  deriving (Eq,Show)
-
-convertTo ∷  DateTime → Day
-convertTo dt = fromGregorian (fromIntegral $ year dt) (month dt) (day dt)
-
-convertFrom ∷  Day → DateTime
-convertFrom dt = 
-  let (y,m,d) = toGregorian dt
-  in  date (fromIntegral y) m d
-
-modifyDate ∷  (t → Day → Day) → t → DateTime → DateTime
-modifyDate fn x dt = convertFrom $ fn x $ convertTo dt
-
-addInterval ∷  DateTime → DateInterval → DateTime
-addInterval dt (Days ds) = modifyDate addDays ds dt
-addInterval dt (Weeks ws) = modifyDate addDays (ws*7) dt
-addInterval dt (Months ms) = modifyDate addGregorianMonthsClip ms dt
-addInterval dt (Years ys) = modifyDate addGregorianYearsClip ys dt
-
-maybePlural ∷ String → Parser String
-maybePlural str = do
-  r ← string str
-  optional $ char 's'
-  return (capitalize r)
-
-pDateInterval ∷ Parser DateIntervalType
-pDateInterval = do
-  s ← choice $ map maybePlural ["day", "week", "month", "year"]
-  return $ read s
-
-pRelDate ∷ DateTime → Parser DateTime
-pRelDate date = do
-  offs ← (try futureDate) <|> (try passDate) <|> (try today) <|> (try tomorrow) <|> yesterday
-  return $ date `addInterval` offs
-
-futureDate ∷ Parser DateInterval
-futureDate = do
-  string "in "
-  n ← many1 digit
-  char ' '
-  tp ← pDateInterval
-  case tp of
-    Day →   return $ Days (read n)
-    Week →  return $ Weeks (read n)
-    Month → return $ Months (read n)
-    Year →  return $ Years (read n)
-
-passDate ∷ Parser DateInterval
-passDate = do
-  n ← many1 digit
-  char ' '
-  tp ← pDateInterval
-  string " ago"
-  case tp of
-    Day →   return $ Days $ - (read n)
-    Week →  return $ Weeks $ - (read n)
-    Month → return $ Months $ - (read n)
-    Year →  return $ Years $ - (read n)
-
-today ∷ Parser DateInterval
-today = do
-  string "today"
-  return $ Days 0
-
-tomorrow ∷ Parser DateInterval
-tomorrow = do
-  string "tomorrow"
-  return $ Days 1
-
-yesterday ∷ Parser DateInterval
-yesterday = do
-  string "yesterday"
-  return $ Days (-1)
-
-pDate ∷ DateTime → Parser DateTime
-pDate date =  (try $ pRelDate date) <|> (try $ pAbsDate $ year date)
+pDateTime ∷ Int → Parser AnyNumber
+pDateTime year = choice $ map try $ [
+                              time12,
+                              time24,
+                              euroDate,
+                              americanDate,
+                              euroDate' year,
+                              americanDate' year ]
 
 -- | Parse date/time
-parseDate ∷ DateTime  -- ^ Current date/time
+parseDate ∷ Int       -- ^ Current year
           → String    -- ^ String to parse
-          → Either ParseError DateTime
-parseDate date s = parse (pDate date) "" s
-
--- | Parse absolute date/time
-parseAbsDate ∷ Int       -- ^ Current year
-             → String    -- ^ String to parse
-             → Either ParseError DateTime
-parseAbsDate year s = parse (pAbsDate year) "" s
+          → Either ParseError AnyNumber
+parseDate year s = parse (pDateTime year) "" s
 

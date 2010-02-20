@@ -2,33 +2,59 @@
 
 module Types where
 
-import Data.Data
-import Data.Generics
+import Data.Time.Calendar
 import Data.Char (toUpper)
 
 import Unicode
 
-data DateTime =
-  DateTime {
-    year ∷ Int,
-    month ∷ Int,
-    day ∷ Int,
-    hour ∷ Int,
-    minute ∷ Int,
-    second ∷ Int }
-  deriving (Eq,Ord,Data,Typeable)
+data AnyNumber = 
+    Number Double
+  | Date {
+      year ∷ Int,
+      month ∷ Int,
+      day ∷ Int }
+  | Time {
+      hour ∷ Int,
+      minute ∷ Int,
+      second ∷ Int }
+  deriving (Eq,Ord)
 
-instance Show DateTime where
-  show (DateTime y m d h min s) = 
-    show d ⧺ " " ⧺ showMonth m ⧺ " " ⧺ show y ⧺ ", " ⧺
-      show h ⧺ ":" ⧺ show min ⧺ ":" ⧺ show s
+instance Show AnyNumber where
+  show (Number x) = show x
+  show (Date y m d) = show y ⧺ "/" ⧺ show m ⧺ "/" ⧺ show d
+  show (Time h m s) = show h ⧺ ":" ⧺ show m ⧺ ":" ⧺ show s
 
-data Time = 
-  Time {
-    tHour ∷ Int,
-    tMinute ∷ Int,
-    tSecond ∷ Int }
-  deriving (Eq,Ord,Show,Data,Typeable)
+onAnyNumber ∷ (Double → Double → Double) → AnyNumber → AnyNumber → AnyNumber
+onAnyNumber op x y = 
+  let t = case x of
+            Number _   → 0
+            Date _ _ _ → 1
+            Time _ _ _ → 2
+  in  fromDouble t $ (toDouble x) `op` (toDouble y)
+
+mapAnyNumber ∷  (Double → Double) → AnyNumber → AnyNumber
+mapAnyNumber f x =
+  let t = case x of
+            Number _   → 0
+            Date _ _ _ → 1
+            Time _ _ _ → 2
+  in  fromDouble t $ f (toDouble x)
+
+instance Num AnyNumber where
+  (+) = onAnyNumber (+)
+  (-) = onAnyNumber (-)
+  (*) = onAnyNumber (*)
+  negate = mapAnyNumber negate
+  abs = mapAnyNumber abs
+  signum = mapAnyNumber signum
+  fromInteger n = fromDouble 0 (fromIntegral n)
+
+instance Fractional AnyNumber where
+  (/) = onAnyNumber (/)
+  recip = mapAnyNumber recip
+
+readAnyNumber ∷ String → AnyNumber
+readAnyNumber s = Number $ fromIntegral (read s ∷ Int)
 
 data Mode = Coefs
           | TrendColumn
@@ -36,50 +62,41 @@ data Mode = Coefs
           | Predict {randomize ∷ Bool, periods ∷ Int}
 
 data Info = Info {
-             xvals ∷ [Double],
-             yvals ∷ [Double],
-             trend ∷ [Double],
-             coefA ∷ Double,
-             coefB ∷ Double }
+             xvals ∷ [AnyNumber],
+             yvals ∷ [AnyNumber],
+             trend ∷ [AnyNumber],
+             coefA ∷ AnyNumber,
+             coefB ∷ AnyNumber }
 
-class ToDouble a where
-  toDouble ∷ a → Double
+divD ∷  Double → Double → Double
+a `divD` b = fromIntegral $ floor (a/b)
 
-instance ToDouble Double where
-  toDouble = id
+modD ∷  Double → Double → Double
+a `modD` b = a - b*(a `divD` b)
 
-instance ToDouble DateTime where
-  toDouble = dateToDouble 
+toDouble ∷ AnyNumber → Double
+toDouble (Date y m d) = 
+  let day = fromGregorian (fromIntegral y) m d
+  in  fromIntegral $ toModifiedJulianDay day
 
-months ∷ [String]
-months = ["january",
-          "february",
-          "march",
-          "april",
-          "may",
-          "june",
-          "july",
-          "august",
-          "september",
-          "october",
-          "november",
-          "december"]
+toDouble (Time h m s) = 60.0*(fromIntegral h)
+                      + (fromIntegral m)
+                      + (fromIntegral s)/60.0
+toDouble (Number d) = d
 
-capitalize ∷ String → String
-capitalize [] = []
-capitalize (x:xs) = (toUpper x):xs
+frac ∷ Double → Double
+frac x = x - (fromIntegral $ floor x)
 
-showMonth ∷  Int → String
-showMonth i = capitalize $ months !! (i-1)
+fromDouble ∷ Int → Double → AnyNumber
+fromDouble 0 x = Number x
+fromDouble 1 x =
+  let (y,m,d) = toGregorian $ ModifiedJulianDay (round x)
+  in  Date (fromIntegral y) m d
+fromDouble 2 x = 
+  let h = x `divD` 60.0
+      ms = x - h*60.0
+      m = floor ms
+      s = 60.0*frac ms
+  in  Time (round h) m (round s)
 
--- a `divD` b = fromIntegral $ round (a/b)
--- a `modD` b = a - b*(a `divD` b)
-
-dateToDouble ∷ DateTime → Double
-dateToDouble (DateTime y m d h mi s) = 365.25*(fromIntegral y)
-                                     + 30.438*(fromIntegral m)
-                                     + (fromIntegral d)
-                                     + (fromIntegral h)/24.0
-                                     + (fromIntegral mi)/1440.0
-                                     + (fromIntegral s) / 86400.0
 

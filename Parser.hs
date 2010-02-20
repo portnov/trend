@@ -6,10 +6,11 @@ module Parser
 
 import Text.ParserCombinators.Parsec
 
+import Types
 import Unicode
 import Dates
 
-pSign ∷ (Num a) => Parser a
+pSign ∷ (Num a) ⇒ Parser a
 pSign = do
   s ← optionMaybe $ oneOf "+-"
   return $ case s of
@@ -17,7 +18,7 @@ pSign = do
              Just '-' → -1
              Nothing → 1
 
-pNumber ∷ Parser Double
+pNumber ∷ Parser AnyNumber
 pNumber = do
   sgn ← pSign
   m ← pMantiss
@@ -28,7 +29,7 @@ pNumber = do
         else many1 digit
   return $ sgn * m * 10^(osgn*(read o∷Int))
 
-pMantiss ∷ Parser Double
+pMantiss ∷ Parser AnyNumber
 pMantiss = do
   i ← many digit
   p ← optionMaybe $ oneOf ".,"
@@ -38,41 +39,35 @@ pMantiss = do
                 then many1 digit
                 else many digit
   let n = length m
-  return $ (read i) + (read m)/(10^n)
+  return $ (readAnyNumber i) + (readAnyNumber m)/(10^n)
 
-pDoubleDate ∷ Parser Double
-pDoubleDate = do
-  dt ← pAbsDate 2010
-  char '\t'
-  return $ toDouble dt
+pAnyNumber ∷ Parser AnyNumber
+pAnyNumber = (try $ pDateTime 2010) <|> pNumber
 
-pNumberOrDate ∷ Parser Double
-pNumberOrDate = (try pNumber) <|> pDoubleDate 
-
-pPair ∷ Parser (Double, Double)
+pPair ∷ Parser (AnyNumber, AnyNumber)
 pPair = do
-  x ← pNumber
+  x ← pAnyNumber
   many1 $ oneOf " \t"
-  y ← pNumber
+  y ← pAnyNumber
   return (x,y)
 
 pNewline = many1 $ oneOf "\n\r"
 
-pTwoColumns ∷ Parser [(Double,Double)]
+pTwoColumns ∷ Parser [(AnyNumber,AnyNumber)]
 pTwoColumns = try pPair `sepEndBy` pNewline
 
-pOneColumn ∷ Parser [(Double,Double)]
+pOneColumn ∷ Parser [(AnyNumber,AnyNumber)]
 pOneColumn = do
-  lst ← pNumber `sepEndBy` pNewline
-  return $ zip [1..] lst
+  lst ← pAnyNumber `sepEndBy` pNewline
+  return $ zip (map fromInteger [1..]) lst
 
-pColumns ∷  Parser [(Double, Double)]
+pColumns ∷  Parser [(AnyNumber, AnyNumber)]
 pColumns = do
-  x ← choice $ map try [pOneColumn, pTwoColumns]
+  x ← choice $ map try [pTwoColumns, pOneColumn]
   eof
   return x
 
-parseColumns ∷  String → ([Double], [Double])
+parseColumns ∷  String → ([AnyNumber], [AnyNumber])
 parseColumns s =
   let s' = if last s ∈ "\r\n"
              then init s
