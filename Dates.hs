@@ -28,7 +28,7 @@ times n p = do
 number ∷ Int → Int → Parser Int
 number n m = do
   t ← read `fmap` (n `times` digit)
-  if t > m
+  if (t > m) || (t < 1)
     then fail "number too large"
     else return t
 

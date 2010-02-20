@@ -11,7 +11,7 @@ import Unicode
 
 options ∷ [OptDescr Flag]
 options = [
-  Option "c" ["coefs"]   (NoArg $ Left Coefs)          "only print coeffs of linear regression",
+  Option "c" ["coefs"]   (NoArg $ Left Coefs)          "only print coeffs of regression",
   Option "t" ["add"]     (NoArg $ Left TrendColumn)    "add column with trend values",
   Option "s" ["sub"]     (NoArg $ Left SubTrend)       "substract trend from input data",
   Option "p" ["predict"] (OptArg mPeriods "N")         "predict values for N periods",
