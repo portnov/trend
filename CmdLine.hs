@@ -11,13 +11,14 @@ import Unicode
 
 options ∷ [OptDescr Flag]
 options = [
-  Option "c" ["coefs"]   (NoArg $ Left Coefs)          "only print coeffs of regression",
+  Option "c" ["coefs"]   (NoArg $ Left Coefs)          "only print coeffs of regression (default)",
   Option "t" ["add"]     (NoArg $ Left TrendColumn)    "add column with trend values",
   Option "s" ["sub"]     (NoArg $ Left SubTrend)       "substract trend from input data",
   Option "p" ["predict"] (OptArg mPeriods "N")         "predict values for N periods",
   Option "r" ["random"]  (OptArg mRandom "N")          "randomize predicted values; implies -p",
   Option "L" ["linear"]  (NoArg $ Right Linear)        "use linear regression (default)",
-  Option "S" ["square"]  (NoArg $ Right Square)        "use square regression"
+  Option "S" ["square"]  (NoArg $ Right Square)        "use square regression",
+  Option "E" ["exponent"] (NoArg $ Right Exponent)     "use exponential regression"
   ]
 
 mPeriods Nothing = Left $ Predict False 1
@@ -38,7 +39,7 @@ parse flags = F mode formula
 
 usage = usageInfo header options
   where
-    header = "Usage: trend [OPTIONS...]"
+    header = "Usage: trend [OPTIONS...] [FILE]"
 
 parseCmdLine args = 
   case getOpt RequireOrder options (map decodeString args) of

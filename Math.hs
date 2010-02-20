@@ -36,6 +36,9 @@ systemSquare n xs ys = ([[sx4, sx3, sx2], [sx3, sx2, sx], [sx2, sx, fromIntegral
     sxy = sum $ zipWith (*) xs ys
     sxy2 = sum $ zipWith (*) (map (^2) xs) ys
 
+systemExponent ∷ SystemBuilder
+systemExponent n xs ys = systemLinear n xs (map log ys)
+
 mls ∷ SystemBuilder → Int → [AnyNumber] → [AnyNumber] → (AnyNumber, AnyNumber,AnyNumber)
 mls system n xs ys = 
   let (ma,mb) = system n xs ys
@@ -55,6 +58,7 @@ getInfo n f xs ys = Info xs ys ts a b c formula
       case f of
         Linear → (systemLinear, linear a b)
         Square → (systemSquare, square a b c)
+        Exponent → (systemExponent, exponential a b)
 
 avgStep ∷ Info → AnyNumber
 avgStep info = 
@@ -78,3 +82,6 @@ linear a b x = a*x + b
 
 square ∷ AnyNumber → AnyNumber → AnyNumber → AnyNumber → AnyNumber
 square a b c x = a*x^2 + b*x + c
+
+exponential ∷ AnyNumber → AnyNumber → AnyNumber → AnyNumber
+exponential a b x = exp (a*x + b)

@@ -54,6 +54,25 @@ instance Fractional AnyNumber where
   recip = mapAnyNumber recip
   fromRational = undefined
 
+instance Floating AnyNumber where
+  pi = Number pi
+  exp = mapAnyNumber exp
+  sqrt = mapAnyNumber sqrt
+  log = mapAnyNumber log
+  (**) = onAnyNumber (**)
+  logBase = onAnyNumber logBase
+  sin = mapAnyNumber sin
+  cos = mapAnyNumber cos
+  asin = mapAnyNumber asin
+  atan = mapAnyNumber atan
+  acos = mapAnyNumber acos
+  sinh = mapAnyNumber sinh
+  cosh = mapAnyNumber cosh
+  tanh = mapAnyNumber tanh
+  asinh = mapAnyNumber asinh
+  acosh = mapAnyNumber acosh
+  atanh = mapAnyNumber atanh
+
 readAnyNumber ∷ String → AnyNumber
 readAnyNumber s = Number $ fromIntegral (read s ∷ Int)
 
@@ -64,6 +83,7 @@ data Mode = Coefs
 
 data Formula = Linear
              | Square
+             | Exponent
 
 data Flags = F Mode Formula
 
