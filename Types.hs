@@ -52,6 +52,7 @@ instance Num AnyNumber where
 instance Fractional AnyNumber where
   (/) = onAnyNumber (/)
   recip = mapAnyNumber recip
+  fromRational = undefined
 
 readAnyNumber ∷ String → AnyNumber
 readAnyNumber s = Number $ fromIntegral (read s ∷ Int)
@@ -61,12 +62,21 @@ data Mode = Coefs
           | SubTrend
           | Predict {randomize ∷ Bool, periods ∷ Int}
 
+data Formula = Linear
+             | Square
+
+data Flags = F Mode Formula
+
+type Flag = Either Mode Formula
+
 data Info = Info {
              xvals ∷ [AnyNumber],
              yvals ∷ [AnyNumber],
              trend ∷ [AnyNumber],
              coefA ∷ AnyNumber,
-             coefB ∷ AnyNumber }
+             coefB ∷ AnyNumber,
+             coefC ∷ AnyNumber,
+             func ∷ AnyNumber → AnyNumber }
 
 divD ∷  Double → Double → Double
 a `divD` b = fromIntegral $ floor (a/b)
