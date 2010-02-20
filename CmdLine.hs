@@ -18,7 +18,8 @@ options = [
   Option "r" ["random"]  (OptArg mRandom "N")          "randomize predicted values; implies -p",
   Option "L" ["linear"]  (NoArg $ Right Linear)        "use linear regression (default)",
   Option "S" ["square"]  (NoArg $ Right Square)        "use square regression",
-  Option "E" ["exponent"] (NoArg $ Right Exponent)     "use exponential regression"
+  Option "E" ["exponent"] (NoArg $ Right Exponent)     "use exponential regression",
+  Option "A" ["auto"]    (NoArg $ Right Auto)          "try to guess type of regression"
   ]
 
 mPeriods Nothing = Left $ Predict False 1

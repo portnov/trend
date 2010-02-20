@@ -84,6 +84,7 @@ data Mode = Coefs
 data Formula = Linear
              | Square
              | Exponent
+             | Auto
 
 data Flags = F Mode Formula
 

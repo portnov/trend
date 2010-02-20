@@ -1,10 +1,11 @@
-{-# LANGUAGE UnicodeSyntax #-}
+{-# LANGUAGE UnicodeSyntax, PatternGuards #-}
 
 module Math
   (getInfo, predict, subTrend)
   where
 
-import Data.List (transpose)
+import Data.List (transpose,minimumBy)
+import Data.Function (on)
 import Data.Packed.Matrix
 import Numeric.LinearAlgebra.Algorithms
 
@@ -50,7 +51,15 @@ mls system n xs ys =
   in  (Number a,Number b, Number c)
 
 getInfo ∷ Int → Formula → [AnyNumber] → [AnyNumber] → Info 
-getInfo n f xs ys = Info xs ys ts a b c formula
+getInfo n f xs ys | Auto ← f = 
+  let infoL = getInfo' n Linear xs ys
+      infoS = getInfo' n Square xs ys
+      infoE = getInfo' n Exponent xs ys
+  in  minimumBy (compare `on` stdDev) [infoL, infoS, infoE]
+                  | otherwise = getInfo' n f xs ys
+
+getInfo' ∷ Int → Formula → [AnyNumber] → [AnyNumber] → Info 
+getInfo' n f xs ys = Info xs ys ts a b c formula
   where
     (a,b,c) = mls system n xs ys
     ts      = map formula xs
@@ -64,6 +73,13 @@ avgStep ∷ Info → AnyNumber
 avgStep info = 
   let s = zipWith (-) (tail $ xvals info) (xvals info)
   in  ((sum s)/(fromIntegral $ length s))
+
+stdDev ∷ Info → AnyNumber
+stdDev info = 
+  let ts = trend info
+      ys = yvals info
+      n = length ts
+  in  (sum $ map (^2) $ zipWith (-) ys ts)/(fromIntegral n-1)
 
 predict ∷ Int → Info → Info
 predict n info@(Info xs ys ts a b c func) = 
