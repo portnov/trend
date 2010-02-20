@@ -54,11 +54,11 @@ pPair = do
 pNewline = many1 $ oneOf "\n\r"
 
 pTwoColumns ∷ Parser [(AnyNumber,AnyNumber)]
-pTwoColumns = try pPair `sepEndBy` pNewline
+pTwoColumns = try pPair `sepEndBy1` pNewline
 
 pOneColumn ∷ Parser [(AnyNumber,AnyNumber)]
 pOneColumn = do
-  lst ← pAnyNumber `sepEndBy` pNewline
+  lst ← pAnyNumber `sepEndBy1` pNewline
   return $ zip (map fromInteger [1..]) lst
 
 pColumns ∷  Parser [(AnyNumber, AnyNumber)]
