@@ -28,14 +28,14 @@ main = do
   let (F mode formula, file) = parseCmdLine args
   (xs,ys) ← return ∘ parseColumns =<< readFile' file
   let info = getInfo (length xs) formula xs ys
-      info' = case mode of
-                SubTrend → subTrend info
-                Predict _ n → predict n info
-                _         → info
       printer = case mode of
                   Coefs → printCoefs
                   TrendColumn → printTrend
                   SubTrend → printInfo
                   Predict _ _ → printTrend
+  info' ← case mode of
+            SubTrend → return $ subTrend info
+            Predict b n → predict n b info
+            _         → return info
   printer info'
                 

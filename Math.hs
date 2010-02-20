@@ -1,13 +1,19 @@
 {-# LANGUAGE UnicodeSyntax, PatternGuards #-}
 
 module Math
-  (getInfo, predict, subTrend)
+  (getInfo, predict, subTrend, randoms)
   where
 
+import Control.Monad
+import System.Random hiding (randoms)
 import Data.List (transpose,minimumBy)
 import Data.Function (on)
 import Data.Packed.Matrix
 import Numeric.LinearAlgebra.Algorithms
+
+-- import Data.Random.RVar
+-- import Data.Random.Distribution.Normal
+-- import Data.Random.Source.DevRandom
 
 import Types
 import Unicode
@@ -81,12 +87,31 @@ stdDev info =
       n = length ts
   in  (sum $ map (^2) $ zipWith (-) ys ts)/(fromIntegral n-1)
 
-predict ∷ Int → Info → Info
-predict n info@(Info xs ys ts a b c func) = 
+-- randomsD ∷ Double → Int → IO [Double]
+-- randomsD s n = do
+--   replicateM n (runRVar (normal 0 s) DevRandom)
+-- 
+randoms ∷ AnyNumber → Int → IO [AnyNumber]
+randoms s n = do
+  lst ← randomsD (toDouble s) n
+  return $ map Number lst
+
+randomsD ∷ Double → Int → IO [Double]
+randomsD s n = replicateM n $ do
+  r1 ← randomIO
+  r2 ← randomIO
+  return $ s * cos(2*pi*r1)*sqrt(-2*log(r2))
+
+predict ∷ Int → Bool → Info → IO Info
+predict n r info@(Info xs ys ts a b c func) = do
   let st = avgStep info
       xs' = take n $ tail $ iterate (+st) (last xs)
       ys' = map func xs'
-  in  Info (xs⧺xs') (ys⧺ys') (ts⧺ys') a b c func
+  rs ← if r
+         then randoms (stdDev info) n
+         else return $ replicate n 0
+  let ys'' = zipWith (+) ys' rs
+  return $ Info (xs⧺xs') (ys⧺ys'') (ts⧺ys') a b c func
 
 subTrend ∷ Info → Info
 subTrend (Info xs ys ts a b c f) = Info xs ys' ts a b c f
