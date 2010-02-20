@@ -85,7 +85,7 @@ stdDev info =
   let ts = trend info
       ys = yvals info
       n = length ts
-  in  (sum $ map (^2) $ zipWith (-) ys ts)/(fromIntegral n-1)
+  in  sqrt $ (sum $ map (^2) $ zipWith (-) ys ts)/(fromIntegral n-1)
 
 -- randomsD ∷ Double → Int → IO [Double]
 -- randomsD s n = do
