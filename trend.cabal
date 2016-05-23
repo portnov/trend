@@ -8,7 +8,7 @@ Build-Type:     Simple
 
 Executable trend
   Build-Depends:  base >= 3 && <= 5, utf8-string, containers, parsec >= 3 && < 4,
-                  syb, mtl, time, regex-pcre, hmatrix, random
+                  syb, mtl, time, regex-pcre, hmatrix, random, dates
   GHC-options:    -O2
   Main-Is:        trend.hs
 

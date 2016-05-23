@@ -4,9 +4,10 @@ module Parser
   where
 
 import Text.ParserCombinators.Parsec
+import Data.Dates
+import System.IO.Unsafe
 
 import Types
-import Dates
 
 pSign :: (Num a) => Parser a
 pSign = do
@@ -40,7 +41,8 @@ pMantiss = do
   return $ (readAnyNumber i) + (readAnyNumber m)/(10^n)
 
 pAnyNumber :: Parser AnyNumber
-pAnyNumber = (try $ pDateTime 2010) <|> pNumber
+pAnyNumber = let now = unsafePerformIO getCurrentDateTime
+             in (try $ Date `fmap` pDate now) <|> pNumber
 
 pPair :: Parser (AnyNumber, AnyNumber)
 pPair = do
