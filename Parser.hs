@@ -1,4 +1,3 @@
-{-# LANGUAGE UnicodeSyntax #-}
 
 module Parser
 --   (parseColumns)
@@ -7,33 +6,32 @@ module Parser
 import Text.ParserCombinators.Parsec
 
 import Types
-import Unicode
 import Dates
 
-pSign ∷ (Num a) ⇒ Parser a
+pSign :: (Num a) => Parser a
 pSign = do
-  s ← optionMaybe $ oneOf "+-"
+  s <- optionMaybe $ oneOf "+-"
   return $ case s of
-             Just '+' → 1
-             Just '-' → -1
-             Nothing → 1
+             Just '+' -> 1
+             Just '-' -> -1
+             Nothing -> 1
 
-pNumber ∷ Parser AnyNumber
+pNumber :: Parser AnyNumber
 pNumber = do
-  sgn ← pSign
-  m ← pMantiss
-  e ← optionMaybe $ oneOf "eE"
-  osgn ← pSign
-  o ← if e == Nothing
+  sgn <- pSign
+  m <- pMantiss
+  e <- optionMaybe $ oneOf "eE"
+  osgn <- pSign
+  o <- if e == Nothing
         then return "0"
         else many1 digit
-  return $ sgn * m * 10^(osgn*(read o∷Int))
+  return $ sgn * m * 10^(osgn*(read o::Int))
 
-pMantiss ∷ Parser AnyNumber
+pMantiss :: Parser AnyNumber
 pMantiss = do
-  i ← many digit
-  p ← optionMaybe $ oneOf ".,"
-  m ← if p == Nothing
+  i <- many digit
+  p <- optionMaybe $ oneOf ".,"
+  m <- if p == Nothing
         then return "0"
         else if (null i)
                 then many1 digit
@@ -41,37 +39,37 @@ pMantiss = do
   let n = length m
   return $ (readAnyNumber i) + (readAnyNumber m)/(10^n)
 
-pAnyNumber ∷ Parser AnyNumber
+pAnyNumber :: Parser AnyNumber
 pAnyNumber = (try $ pDateTime 2010) <|> pNumber
 
-pPair ∷ Parser (AnyNumber, AnyNumber)
+pPair :: Parser (AnyNumber, AnyNumber)
 pPair = do
-  x ← pAnyNumber
+  x <- pAnyNumber
   many1 $ oneOf " \t"
-  y ← pAnyNumber
+  y <- pAnyNumber
   return (x,y)
 
 pNewline = many1 $ oneOf "\n\r"
 
-pTwoColumns ∷ Parser [(AnyNumber,AnyNumber)]
+pTwoColumns :: Parser [(AnyNumber,AnyNumber)]
 pTwoColumns = try pPair `sepEndBy1` pNewline
 
-pOneColumn ∷ Parser [(AnyNumber,AnyNumber)]
+pOneColumn :: Parser [(AnyNumber,AnyNumber)]
 pOneColumn = do
-  lst ← pAnyNumber `sepEndBy1` pNewline
+  lst <- pAnyNumber `sepEndBy1` pNewline
   return $ zip (map fromInteger [1..]) lst
 
-pColumns ∷  Parser [(AnyNumber, AnyNumber)]
+pColumns ::  Parser [(AnyNumber, AnyNumber)]
 pColumns = do
-  x ← choice $ map try [pTwoColumns, pOneColumn]
+  x <- choice $ map try [pTwoColumns, pOneColumn]
   eof
   return x
 
-parseColumns ∷  String → ([AnyNumber], [AnyNumber])
+parseColumns ::  String -> ([AnyNumber], [AnyNumber])
 parseColumns s =
-  let s' = if last s ∈ "\r\n"
+  let s' = if last s `elem` "\r\n"
              then init s
              else s
   in case parse pColumns "stdin" s' of
-      Right d → unzip d
-      Left e → error $ show e
+      Right d -> unzip d
+      Left e -> error $ show e
