@@ -1,0 +1,39 @@
+trend README
+============
+
+`trend` is a unix-style command line tool which can calculate linear, quadratic
+and exponential regressions on incoming data.  It uses least squares method to
+calculate regressions coefficients. It can also select regressions type
+automatically for best fit.
+
+Usage: trend [OPTIONS...] [FILE]
+  -c     --coefs        only print coeffs of regression (default)
+  -t     --add          add column with trend values
+  -s     --sub          substract trend from input data
+  -p[N]  --predict[=N]  predict values for N periods
+  -r[N]  --random[=N]   randomize predicted values; implies -p
+  -L     --linear       use linear regression (default)
+  -S     --square       use square regression
+  -E     --exponent     use exponential regression
+  -A     --auto         try to guess type of regression
+
+Example:
+
+    $ trend --square
+    1 8
+    2 6
+    3 5
+    4 2
+    5 2
+    6 1
+    7 2
+    9 4
+    10 5
+    11 7
+    12 9
+    0.23395990844142445 -2.9293889158632327 10.814247069431962
+
+In this example, the last line represents coefficients A, B, C in equation
+Y = A*X^2 + B*X +C,
+which are most suitable for input data.
+
