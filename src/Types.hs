@@ -80,9 +80,7 @@ data Formula = Linear
              | Exponent
              | Auto
 
-data Flags = F Mode Formula
-
-type Flag = Either Mode Formula
+data CmdLine = CmdLine Mode Formula FilePath
 
 data Info = Info {
              xvals :: [AnyNumber],

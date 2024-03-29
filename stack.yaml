@@ -4,11 +4,6 @@
 # For advanced use and comprehensive documentation of the format, please see:
 # https://docs.haskellstack.org/en/stable/yaml_configuration/
 
-# A warning or info to be displayed to the user on config load.
-user-message: |
-  Warning (added by new or init): Some packages were found to be incompatible with the resolver and have been left commented out in the packages section.
-  You can omit this message by removing it from stack.yaml
-
 # Resolver to choose a 'specific' stackage snapshot or a compiler version.
 # A snapshot resolver dictates the compiler version and the set of packages
 # to be used for project dependencies. For example:
@@ -22,7 +17,7 @@ user-message: |
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2023-01-01.yaml
-resolver: lts-20.6
+resolver: lts-21.21
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.

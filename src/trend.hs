@@ -1,13 +1,14 @@
 
 import Control.Monad
 import System.Environment (getArgs)
+import Options.Applicative
 
 import Types
 import Parser
 import Math
 import CmdLine
 
-readFile' "" = getContents
+readFile' "-" = getContents
 readFile' x = readFile x
 
 printCoefs (Info _ _ _ a b c _) = putStrLn $ show a ++ " " ++ show b ++ " " ++ show c
@@ -22,8 +23,7 @@ printInfo (Info xs ys _ _ _ _ _) = sequence_ $ zipWith pr xs ys
 
 
 main = do
-  args <- getArgs
-  let (F mode formula, file) = parseCmdLine args
+  CmdLine mode formula file <- execParser parserInfo
   (xs,ys) <- return . parseColumns =<< readFile' file
   let info = getInfo (length xs) formula xs ys
       printer = case mode of

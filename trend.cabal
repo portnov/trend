@@ -2,7 +2,7 @@
 --  see http://haskell.org/cabal/users-guide/
 
 name:                trend
-version:             0.1.0.0
+version:             0.2.0.0
 synopsis:            Unix-style command line tool to analyze trends in numerical data
 description:         This utility calculates linear, quadratic and exponential regressions from input data.
                      It can also predict next values based on regression coefficients and optionally randomize
@@ -23,10 +23,20 @@ cabal-version:       >=1.10
 
 executable trend
   main-is:             trend.hs
-  -- other-modules:       
+  other-modules:       CmdLine
+                       Math
+                       Parser
+                       Types
   other-extensions:    PatternGuards, DeriveDataTypeable
-  build-depends:       base >=4.7 && <5, utf8-string >=1.0 && <1.1, random >=1.1, hmatrix >=0.16,  parsec >=3.1 && <3.2, dates >=0.2 && <0.3, time >=1.4
-  -- hs-source-dirs:      
+  build-depends:       base >=4.7 && <5,
+                       utf8-string >=1.0 && <1.1,
+                       random >=1.1,
+                       hmatrix >=0.16,
+                       parsec >=3.1 && <3.2,
+                       dates >=0.2 && <0.3,
+                       time >=1.4,
+                       optparse-applicative >= 0.17.1
+  hs-source-dirs:      src
   default-language:    Haskell2010
 
 Source-repository head
