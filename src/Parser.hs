@@ -44,34 +44,37 @@ pAnyNumber :: Parser AnyNumber
 pAnyNumber = let now = unsafePerformIO getCurrentDateTime
              in (try $ Date `fmap` pDate now) <|> pNumber
 
-pPair :: Parser (AnyNumber, AnyNumber)
-pPair = do
+pPair :: Maybe Char -> Parser (AnyNumber, AnyNumber)
+pPair mbSep = do
   x <- pAnyNumber
-  many1 $ oneOf " \t"
+  case mbSep of
+    Nothing -> many1 $ oneOf " \t"
+    Just sep -> string [sep]
   y <- pAnyNumber
   return (x,y)
 
 pNewline = many1 $ oneOf "\n\r"
 
-pTwoColumns :: Parser [(AnyNumber,AnyNumber)]
-pTwoColumns = try pPair `sepEndBy1` pNewline
+pTwoColumns :: Maybe Char -> Parser [(AnyNumber,AnyNumber)]
+pTwoColumns mbSep = try (pPair mbSep) `sepEndBy1` pNewline
 
 pOneColumn :: Parser [(AnyNumber,AnyNumber)]
 pOneColumn = do
   lst <- pAnyNumber `sepEndBy1` pNewline
   return $ zip (map fromInteger [1..]) lst
 
-pColumns ::  Parser [(AnyNumber, AnyNumber)]
-pColumns = do
-  x <- choice $ map try [pTwoColumns, pOneColumn]
+pColumns :: Maybe Char ->  Parser [(AnyNumber, AnyNumber)]
+pColumns mbSep = do
+  x <- choice $ map try [pTwoColumns mbSep, pOneColumn]
   eof
   return x
 
-parseColumns ::  String -> ([AnyNumber], [AnyNumber])
-parseColumns s =
+parseColumns :: Maybe Char -> String -> ([AnyNumber], [AnyNumber])
+parseColumns mbSep s =
   let s' = if last s `elem` "\r\n"
              then init s
              else s
-  in case parse pColumns "stdin" s' of
+  in case parse (pColumns mbSep) "stdin" s' of
       Right d -> unzip d
       Left e -> error $ show e
+

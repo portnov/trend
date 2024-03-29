@@ -23,8 +23,8 @@ printInfo (RegressionResult xs ys _ _ _ _ _) = sequence_ $ zipWith pr xs ys
 
 
 main = do
-  CmdLine mode formula file <- execParser parserInfo
-  (xs,ys) <- return . parseColumns =<< readFile' file
+  CmdLine mbSep mode formula file <- execParser parserInfo
+  (xs,ys) <- parseColumns mbSep <$> readFile' file
   let info = calculate (length xs) formula xs ys
       printer = case mode of
                   Coefs -> printCoefs

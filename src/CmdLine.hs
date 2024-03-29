@@ -8,9 +8,23 @@ import Data.Either
 
 import Types
 
+char :: ReadM Char
+char = eitherReader $ \str ->
+  if length str == 1
+    then Right $ head str
+    else Left "Delimiter must be a single character"
+
 cmdline :: Parser CmdLine
-cmdline = CmdLine <$> mode <*> formula <*> file
+cmdline = CmdLine <$> separator <*> mode <*> formula <*> file
   where
+    separator = optional $
+          option char
+            ( short 'd'
+              <> long "delimiter"
+              <> help "specify delimiter of values within each row"
+              <> metavar "D"
+            )
+
     mode =
           flag' Coefs
             ( short 'c'

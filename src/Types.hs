@@ -80,7 +80,7 @@ data Formula = Linear
              | Exponent
              | Auto
 
-data CmdLine = CmdLine Mode Formula FilePath
+data CmdLine = CmdLine (Maybe Char) Mode Formula FilePath
 
 data RegressionResult = RegressionResult {
              xvals :: [AnyNumber],
