@@ -1,13 +1,14 @@
 {-# LANGUAGE PatternGuards #-}
 
 module Math
-  (calculate, predict, subTrend, randoms)
+  (calculateMany, predictMany, subTrendMany, randoms)
   where
 
 import Control.Monad
 import Data.Maybe
 import System.Random hiding (randoms)
 import Data.List (transpose,minimumBy)
+import qualified Data.Map as M
 import Data.Function (on)
 import Numeric.LinearAlgebra
 
@@ -55,16 +56,21 @@ mls system n xs ys =
                   _ -> error "Unexpected number of coefficients!"
   in  (Number a,Number b, Number c)
 
-calculate :: Int -> Formula -> [AnyNumber] -> [AnyNumber] -> RegressionResult 
-calculate n f xs ys | Auto <- f = 
-  let infoL = calculate' n Linear xs ys
-      infoS = calculate' n Square xs ys
-      infoE = calculate' n Exponent xs ys
-  in  minimumBy (compare `on` stdDev) [infoL, infoS, infoE]
-                  | otherwise = calculate' n f xs ys
+calculateMany :: Formula -> RegressionInput -> M.Map String RegressionResult
+calculateMany f input = M.map calculateSeries input
+  where
+    calculateSeries ds = calculate (length $ dsX ds) f ds
 
-calculate' :: Int -> Formula -> [AnyNumber] -> [AnyNumber] -> RegressionResult 
-calculate' n f xs ys = RegressionResult xs ys ts a b c formula
+calculate :: Int -> Formula -> DataSeries -> RegressionResult 
+calculate n f ds | Auto <- f = 
+  let infoL = calculate' n Linear ds
+      infoS = calculate' n Square ds
+      infoE = calculate' n Exponent ds
+  in  minimumBy (compare `on` stdDev) [infoL, infoS, infoE]
+                  | otherwise = calculate' n f ds
+
+calculate' :: Int -> Formula -> DataSeries -> RegressionResult 
+calculate' n f (DataSeries xs ys) = RegressionResult xs ys ts a b c formula
   where
     (a,b,c) = mls system n xs ys
     ts      = map formula xs
@@ -112,10 +118,20 @@ predict n r info@(RegressionResult xs ys ts a b c func) = do
   let ys'' = zipWith (+) ys' rs
   return $ RegressionResult (xs++xs') (ys++ys'') (ts++ys') a b c func
 
+predictMany :: Int -> Bool -> M.Map String RegressionResult -> IO (M.Map String RegressionResult)
+predictMany n r result = do
+  result' <- forM (M.assocs result) $ \(category, info) -> do
+               info' <- predict n r info
+               return (category, info')
+  return $ M.fromList result'
+
 subTrend :: RegressionResult -> RegressionResult
 subTrend (RegressionResult xs ys ts a b c f) = RegressionResult xs ys' ts a b c f
   where
     ys' = zipWith (-) ys ts
+
+subTrendMany :: M.Map String RegressionResult -> M.Map String RegressionResult
+subTrendMany = M.map subTrend
 
 linear :: AnyNumber -> AnyNumber -> AnyNumber -> AnyNumber
 linear a b x = a*x + b

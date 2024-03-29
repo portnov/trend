@@ -4,6 +4,7 @@ module Types where
 
 import Data.Time.Calendar
 import Data.Char (toUpper)
+import qualified Data.Map as M
 
 import qualified Data.Dates as D
 
@@ -80,16 +81,24 @@ data Formula = Linear
              | Exponent
              | Auto
 
-data CmdLine = CmdLine (Maybe Char) Mode Formula FilePath
+data CmdLine = CmdLine (Maybe Char) Bool Mode Formula FilePath
 
 data RegressionResult = RegressionResult {
-             xvals :: [AnyNumber],
-             yvals :: [AnyNumber],
-             trend :: [AnyNumber],
-             coefA :: AnyNumber,
-             coefB :: AnyNumber,
-             coefC :: AnyNumber,
+             xvals :: ![AnyNumber],
+             yvals :: ![AnyNumber],
+             trend :: ![AnyNumber],
+             coefA :: !AnyNumber,
+             coefB :: !AnyNumber,
+             coefC :: !AnyNumber,
              func :: AnyNumber -> AnyNumber }
+
+data DataSeries = DataSeries {
+    dsX :: ![AnyNumber],
+    dsY :: ![AnyNumber]
+  }
+  deriving (Show)
+
+type RegressionInput = M.Map String DataSeries
 
 divD ::  Double -> Double -> Double
 a `divD` b = fromIntegral $ floor (a/b)

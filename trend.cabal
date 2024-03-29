@@ -29,6 +29,7 @@ executable trend
                        Types
   other-extensions:    PatternGuards, DeriveDataTypeable
   build-depends:       base >=4.7 && <5,
+                       containers >= 0.6,
                        utf8-string >=1.0 && <1.1,
                        random >=1.1,
                        hmatrix >=0.16,

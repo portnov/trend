@@ -15,7 +15,7 @@ char = eitherReader $ \str ->
     else Left "Delimiter must be a single character"
 
 cmdline :: Parser CmdLine
-cmdline = CmdLine <$> separator <*> mode <*> formula <*> file
+cmdline = CmdLine <$> separator <*> byCategory <*> mode <*> formula <*> file
   where
     separator = optional $
           option char
@@ -24,6 +24,13 @@ cmdline = CmdLine <$> separator <*> mode <*> formula <*> file
               <> help "specify delimiter of values within each row"
               <> metavar "D"
             )
+
+    byCategory =
+      switch
+        ( short 'C'
+          <> long "by-category"
+          <> help "predict many regressions at once, for each category"
+        )
 
     mode =
           flag' Coefs
