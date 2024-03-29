@@ -29,10 +29,15 @@ main = do
                  then parseColumnsWithCategories
                  else parseColumns
   input <- parser mbSep <$> readFile' file
-  forM_ (M.elems input) $ \ds -> do
+  {-forM_ (M.elems input) $ \ds -> do
     let n = length (dsX ds)
         a = systemLinear n ds
-    print a
+    print a-}
+  {-forM_ (M.elems input) $ \ds -> do
+    let xs = map toDouble $ dsX ds
+    print xs
+    print $ zipWith (-) (tail xs) xs-}
+
   let info = calculateMany formula input
       printer = case mode of
                   Coefs -> printCoefs
