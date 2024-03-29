@@ -5,11 +5,11 @@ module Math
   where
 
 import Control.Monad
+import Data.Maybe
 import System.Random hiding (randoms)
 import Data.List (transpose,minimumBy)
 import Data.Function (on)
-import Data.Packed.Matrix
-import Numeric.LinearAlgebra.Algorithms
+import Numeric.LinearAlgebra
 
 -- import Data.Random.RVar
 -- import Data.Random.Distribution.Normal
@@ -18,7 +18,7 @@ import Numeric.LinearAlgebra.Algorithms
 import Types
 
 solve :: [[Double]] -> [Double] -> [Double]
-solve a b = head $ transpose $ toLists $ linearSolve (fromLists a) (fromLists $ map (:[]) b)
+solve a b = head $ transpose $ toLists $ fromJust $ linearSolve (fromLists a) (fromLists $ map (:[]) b)
 
 type SystemBuilder = Int -> [AnyNumber] -> [AnyNumber] -> ([[AnyNumber]], [AnyNumber])
 

@@ -25,7 +25,7 @@ executable trend
   main-is:             trend.hs
   -- other-modules:       
   other-extensions:    PatternGuards, DeriveDataTypeable
-  build-depends:       base >=4.7 && <5, utf8-string >=1.0 && <1.1, random >=1.1 && <1.2, hmatrix >=0.16 && <0.17, parsec >=3.1 && <3.2, dates >=0.2 && <0.3, time >=1.4 && <1.5
+  build-depends:       base >=4.7 && <5, utf8-string >=1.0 && <1.1, random >=1.1, hmatrix >=0.16,  parsec >=3.1 && <3.2, dates >=0.2 && <0.3, time >=1.4
   -- hs-source-dirs:      
   default-language:    Haskell2010
 
