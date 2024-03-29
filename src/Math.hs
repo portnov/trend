@@ -1,7 +1,7 @@
 {-# LANGUAGE PatternGuards #-}
 
 module Math
-  (calculateMany, predictMany, subTrendMany, randoms)
+  (calculateMany, predictMany, subTrendMany, randoms, systemLinear)
   where
 
 import Control.Monad
@@ -21,10 +21,10 @@ import Types
 solve :: [[Double]] -> [Double] -> [Double]
 solve a b = head $ transpose $ toLists $ fromJust $ linearSolve (fromLists a) (fromLists $ map (:[]) b)
 
-type SystemBuilder = Int -> [AnyNumber] -> [AnyNumber] -> ([[AnyNumber]], [AnyNumber])
+type SystemBuilder = Int -> DataSeries -> ([[AnyNumber]], [AnyNumber])
 
 systemLinear :: SystemBuilder
-systemLinear n xs ys = ([[sx2,sx],[sx,fromIntegral n]], [sxy, sy])
+systemLinear n (DataSeries xs ys) = ([[sx2,sx],[sx,fromIntegral n]], [sxy, sy])
   where
     sx = sum xs
     sx2 = sum $ map (^2) xs
@@ -32,8 +32,9 @@ systemLinear n xs ys = ([[sx2,sx],[sx,fromIntegral n]], [sxy, sy])
     sxy = sum $ zipWith (*) xs ys
 
 systemSquare :: SystemBuilder
-systemSquare n xs ys = ([[sx4, sx3, sx2], [sx3, sx2, sx], [sx2, sx, fromIntegral n]],
-                        [sxy2, sxy, sy])
+systemSquare n (DataSeries xs ys) =
+    ([[sx4, sx3, sx2], [sx3, sx2, sx], [sx2, sx, fromIntegral n]],
+     [sxy2, sxy, sy])
   where
     sx = sum xs
     sy = sum ys
@@ -44,11 +45,11 @@ systemSquare n xs ys = ([[sx4, sx3, sx2], [sx3, sx2, sx], [sx2, sx, fromIntegral
     sxy2 = sum $ zipWith (*) (map (^2) xs) ys
 
 systemExponent :: SystemBuilder
-systemExponent n xs ys = systemLinear n xs (map log ys)
+systemExponent n (DataSeries xs ys) = systemLinear n $ DataSeries xs (map log ys)
 
-mls :: SystemBuilder -> Int -> [AnyNumber] -> [AnyNumber] -> (AnyNumber, AnyNumber,AnyNumber)
-mls system n xs ys = 
-  let (ma,mb) = system n xs ys
+mls :: SystemBuilder -> Int -> DataSeries -> (AnyNumber, AnyNumber,AnyNumber)
+mls system n ds = 
+  let (ma,mb) = system n ds
       ans = solve (map (map toDouble) ma) (map toDouble mb)
       (a,b,c) = case ans of
                   (u:v:[]) -> (u,v,0)
@@ -70,9 +71,9 @@ calculate n f ds | Auto <- f =
                   | otherwise = calculate' n f ds
 
 calculate' :: Int -> Formula -> DataSeries -> RegressionResult 
-calculate' n f (DataSeries xs ys) = RegressionResult xs ys ts a b c formula
+calculate' n f ds@(DataSeries xs ys) = RegressionResult xs ys ts a b c formula
   where
-    (a,b,c) = mls system n xs ys
+    (a,b,c) = mls system n ds
     ts      = map formula xs
     (system, formula) =
       case f of

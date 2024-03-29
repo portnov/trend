@@ -3,6 +3,9 @@
 module Types where
 
 import Data.Time.Calendar
+import Data.Time.LocalTime
+import Data.Time.Clock
+import Data.Time.Clock.POSIX
 import Data.Char (toUpper)
 import Data.Dates.Formats
 import qualified Data.Map as M
@@ -116,9 +119,10 @@ a `modD` b = a - b*(a `divD` b)
 toDouble :: AnyNumber -> Double
 toDouble (Date (D.DateTime y m d hh mm ss)) = 
   let day = fromGregorian (fromIntegral y) m d
-  in  fromIntegral $
-        (24*60*60)*toModifiedJulianDay day +
-        (60*60*fromIntegral hh) + (60*fromIntegral mm) + fromIntegral ss
+      tod = TimeOfDay hh mm (fromIntegral ss)
+      locTime = LocalTime day tod
+      timestamp = nominalDiffTimeToSeconds $ utcTimeToPOSIXSeconds $ localTimeToUTC utc locTime
+  in fromIntegral $ round timestamp
 
 toDouble (Time (D.Time h m s)) = 60.0*(fromIntegral h)
                       + (fromIntegral m)
@@ -131,14 +135,13 @@ frac x = x - (fromIntegral $ floor x)
 fromDouble :: Int -> Double -> AnyNumber
 fromDouble 0 x = Number x
 fromDouble 1 x =
-  let n = round x
-      day = n `div` (24*60*60)
-      (y,m,d) = toGregorian $ ModifiedJulianDay day
-      ss = n `mod` 60
-      mm = (n `div` 60) `mod` 60
-      hh = (n `div` 3600) `mod` 24
+  let timestamp = secondsToNominalDiffTime $ realToFrac x
+      utcTime = posixSecondsToUTCTime timestamp
+      locTime = utcToLocalTime utc utcTime
+      (y,m,d) = toGregorian $ localDay locTime
+      TimeOfDay hh mm ss = localTimeOfDay locTime
   in  Date $ D.DateTime (fromIntegral y) m d
-               (fromIntegral hh) (fromIntegral mm) (fromIntegral ss)
+              hh mm (round ss)
 fromDouble 2 x = 
   let h = x `divD` 60.0
       ms = x - h*60.0
