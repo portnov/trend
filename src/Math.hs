@@ -18,8 +18,8 @@ import Numeric.LinearAlgebra
 
 import Types
 
-solve :: [[Double]] -> [Double] -> [Double]
-solve a b = head $ transpose $ toLists $ fromJust $ linearSolve (fromLists a) (fromLists $ map (:[]) b)
+solve :: [[Double]] -> [Double] -> Maybe [Double]
+solve a b = (head . transpose . toLists) <$> linearSolve (fromLists a) (fromLists $ map (:[]) b)
 
 type SystemBuilder = Int -> DataSeries -> ([[AnyNumber]], [AnyNumber])
 
@@ -47,39 +47,47 @@ systemSquare n (DataSeries xs ys) =
 systemExponent :: SystemBuilder
 systemExponent n (DataSeries xs ys) = systemLinear n $ DataSeries xs (map log ys)
 
-mls :: SystemBuilder -> Int -> DataSeries -> (AnyNumber, AnyNumber,AnyNumber)
+mls :: SystemBuilder -> Int -> DataSeries -> Maybe (AnyNumber, AnyNumber, AnyNumber)
 mls system n ds = 
-  let (ma,mb) = system n ds
-      ans = solve (map (map toDouble) ma) (map toDouble mb)
-      (a,b,c) = case ans of
-                  (u:v:[]) -> (u,v,0)
-                  (u:v:w:[]) -> (u,v,w)
-                  _ -> error "Unexpected number of coefficients!"
-  in  (Number a,Number b, Number c)
+    case solve (map (map toDouble) ma) (map toDouble mb) of
+      Nothing -> Nothing
+      Just [u,v] -> Just (Number u, Number v, Number 0)
+      Just [u,v,w] -> Just (Number u, Number v, Number w)
+      _ -> error "Unexpected number of coefficients!"
+  where
+    (ma,mb) = system n ds
 
 calculateMany :: Formula -> RegressionInput -> M.Map String RegressionResult
-calculateMany f input = M.map calculateSeries input
+calculateMany f input = M.mapMaybe calculateSeries input
   where
     calculateSeries ds = calculate (length $ dsX ds) f ds
 
-calculate :: Int -> Formula -> DataSeries -> RegressionResult 
+calculate :: Int -> Formula -> DataSeries -> Maybe RegressionResult 
 calculate n f ds | Auto <- f = 
   let infoL = calculate' n Linear ds
       infoS = calculate' n Square ds
       infoE = calculate' n Exponent ds
-  in  minimumBy (compare `on` stdDev) [infoL, infoS, infoE]
+      stdDev' Nothing = 0
+      stdDev' (Just res) = stdDev res
+  in  minimumBy (compare `on` stdDev') [infoL, infoS, infoE]
                   | otherwise = calculate' n f ds
 
-calculate' :: Int -> Formula -> DataSeries -> RegressionResult 
-calculate' n f ds@(DataSeries xs ys) = RegressionResult xs ys ts a b c formula
+calculate' :: Int -> Formula -> DataSeries -> Maybe RegressionResult 
+calculate' n f ds@(DataSeries xs ys) =
+    case mls system n ds of
+      Nothing -> Nothing
+      Just (a, b, c) ->
+        let formula = case f of
+                        Linear -> linear a b
+                        Square -> square a b c
+                        Exponent -> exponential a b
+            ts = map formula xs
+        in  Just $ RegressionResult xs ys ts a b c formula
   where
-    (a,b,c) = mls system n ds
-    ts      = map formula xs
-    (system, formula) =
-      case f of
-        Linear -> (systemLinear, linear a b)
-        Square -> (systemSquare, square a b c)
-        Exponent -> (systemExponent, exponential a b)
+    system = case f of
+               Linear -> systemLinear
+               Square -> systemSquare
+               Exponent -> systemExponent
 
 avgStep :: RegressionResult -> AnyNumber
 avgStep info = 
