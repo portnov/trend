@@ -5,6 +5,7 @@ import Options.Applicative
 import Codec.Binary.UTF8.String
 import System.Console.GetOpt
 import Data.Either
+import Data.Dates.Formats
 
 import Types
 
@@ -14,15 +15,30 @@ char = eitherReader $ \str ->
     then Right $ head str
     else Left "Delimiter must be a single character"
 
+dateFormat :: ReadM Format
+dateFormat = eitherReader $ \str ->
+  case parseFormat str of
+    Right fmt -> Right fmt
+    Left err -> Left $ show err
+
 cmdline :: Parser CmdLine
-cmdline = CmdLine <$> separator <*> byCategory <*> mode <*> formula <*> file
+cmdline = CmdLine <$> parserSettings <*> byCategory <*> mode <*> formula <*> file
   where
-    separator = optional $
-          option char
-            ( short 'd'
-              <> long "delimiter"
-              <> help "specify delimiter of values within each row"
-              <> metavar "D"
+    parserSettings =
+      ParserSettings
+        <$> (optional $
+              option char
+                ( short 'd'
+                  <> long "delimiter"
+                  <> help "specify delimiter of values within each row"
+                  <> metavar "D"
+                ))
+        <*> (optional $
+              option dateFormat
+                ( long "date-format"
+                  <> help "specify dates format"
+                  <> metavar "YYYY-MM-DD"
+                )
             )
 
     byCategory =

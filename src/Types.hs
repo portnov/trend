@@ -4,6 +4,7 @@ module Types where
 
 import Data.Time.Calendar
 import Data.Char (toUpper)
+import Data.Dates.Formats
 import qualified Data.Map as M
 
 import qualified Data.Dates as D
@@ -16,7 +17,7 @@ data AnyNumber =
 
 instance Show AnyNumber where
   show (Number x) = show x
-  show (Date (D.DateTime y m d _ _ _)) = show y ++ "/" ++ show m ++ "/" ++ show d
+  show (Date dt) = show dt
   show (Time t) = show t
 
 onAnyNumber :: (Double -> Double -> Double) -> AnyNumber -> AnyNumber -> AnyNumber
@@ -81,7 +82,13 @@ data Formula = Linear
              | Exponent
              | Auto
 
-data CmdLine = CmdLine (Maybe Char) Bool Mode Formula FilePath
+data ParserSettings =
+  ParserSettings {
+    psSeparator :: Maybe Char,
+    psDateFormat :: Maybe Format
+  }
+
+data CmdLine = CmdLine ParserSettings Bool Mode Formula FilePath
 
 data RegressionResult = RegressionResult {
              xvals :: ![AnyNumber],
@@ -107,9 +114,11 @@ modD ::  Double -> Double -> Double
 a `modD` b = a - b*(a `divD` b)
 
 toDouble :: AnyNumber -> Double
-toDouble (Date (D.DateTime y m d _ _ _)) = 
+toDouble (Date (D.DateTime y m d hh mm ss)) = 
   let day = fromGregorian (fromIntegral y) m d
-  in  fromIntegral $ toModifiedJulianDay day
+  in  fromIntegral $
+        (24*60*60)*toModifiedJulianDay day +
+        (60*60*fromIntegral hh) + (60*fromIntegral mm) + fromIntegral ss
 
 toDouble (Time (D.Time h m s)) = 60.0*(fromIntegral h)
                       + (fromIntegral m)
@@ -122,8 +131,14 @@ frac x = x - (fromIntegral $ floor x)
 fromDouble :: Int -> Double -> AnyNumber
 fromDouble 0 x = Number x
 fromDouble 1 x =
-  let (y,m,d) = toGregorian $ ModifiedJulianDay (round x)
-  in  Date $ D.DateTime (fromIntegral y) m d 0 0 0
+  let n = round x
+      day = n `div` (24*60*60)
+      (y,m,d) = toGregorian $ ModifiedJulianDay day
+      ss = n `mod` 60
+      mm = (n `div` 60) `mod` 60
+      hh = (n `div` 3600) `mod` 24
+  in  Date $ D.DateTime (fromIntegral y) m d
+               (fromIntegral hh) (fromIntegral mm) (fromIntegral ss)
 fromDouble 2 x = 
   let h = x `divD` 60.0
       ms = x - h*60.0

@@ -5,6 +5,7 @@ module Parser
 
 import Text.ParserCombinators.Parsec
 import Data.Dates
+import Data.Dates.Formats
 import System.IO.Unsafe
 import qualified Data.Map as M
 
@@ -41,76 +42,82 @@ pMantiss = do
   let n = length m
   return $ (readAnyNumber i) + (readAnyNumber m)/(10^n)
 
-pAnyNumber :: Parser AnyNumber
-pAnyNumber = let now = unsafePerformIO getCurrentDateTime
-             in (try $ Date `fmap` pDate now) <|> pNumber
+pAnyNumber :: ParserSettings -> Parser AnyNumber
+pAnyNumber settings =
+  let now = unsafePerformIO getCurrentDateTime
+      dateParser = case psDateFormat settings of
+                     Nothing -> pDateTime now
+                     Just fmt -> formatParser fmt
+  in (try $ Date `fmap` dateParser) <|> pNumber
 
-pPair :: Maybe Char -> Parser a -> Parser (a, AnyNumber)
-pPair mbSep pFirst = do
+pPair :: ParserSettings -> Parser a -> Parser (a, AnyNumber)
+pPair settings pFirst = do
   x <- pFirst
-  case mbSep of
+  case psSeparator settings of
     Nothing -> many1 $ oneOf " \t"
     Just sep -> string [sep]
-  y <- pAnyNumber
+  y <- pAnyNumber settings
   return (x,y)
 
-pTriplet :: Maybe Char -> Parser (String, AnyNumber, AnyNumber)
-pTriplet mbSep = do
-  x <- pAnyNumber
-  case mbSep of
+pTriplet :: ParserSettings -> Parser (String, AnyNumber, AnyNumber)
+pTriplet settings = do
+  x <- pAnyNumber settings
+  case psSeparator settings of
     Nothing -> many1 $ oneOf " \t"
     Just sep -> string [sep]
-  (category, y) <- pPair mbSep (pCategory mbSep)
+  (category, y) <- pPair settings (pCategory settings)
   return (category, x, y)
 
 pNewline = many1 $ oneOf "\n\r"
 
-pOneColumn :: Parser [(AnyNumber,AnyNumber)]
-pOneColumn = do
-  lst <- pAnyNumber `sepEndBy1` pNewline
+pOneColumn :: ParserSettings -> Parser [(AnyNumber,AnyNumber)]
+pOneColumn settings = do
+  lst <- pAnyNumber settings `sepEndBy1` pNewline
   return $ zip (map fromInteger [1..]) lst
 
-pTwoColumns :: Maybe Char -> Parser [(AnyNumber,AnyNumber)]
-pTwoColumns mbSep = try (pPair mbSep pAnyNumber) `sepEndBy1` pNewline
+pTwoColumns :: ParserSettings -> Parser [(AnyNumber,AnyNumber)]
+pTwoColumns settings = try (pPair settings (pAnyNumber settings)) `sepEndBy1` pNewline
 
-pCategory :: Maybe Char -> Parser String
-pCategory Nothing = many1 $ noneOf " \t"
-pCategory (Just sep) = many1 $ noneOf [sep]
+pCategory :: ParserSettings -> Parser String
+pCategory settings =
+  case psSeparator settings of
+    Nothing -> many1 $ noneOf " \t"
+    Just sep -> many1 $ noneOf [sep]
 
-pOneColumnWithCategories :: Maybe Char -> Parser [(String, AnyNumber, AnyNumber)]
-pOneColumnWithCategories mbSep = do
-  lst <- try (pPair mbSep (pCategory mbSep)) `sepEndBy1` pNewline
+pOneColumnWithCategories :: ParserSettings -> Parser [(String, AnyNumber, AnyNumber)]
+pOneColumnWithCategories settings = do
+  lst <- try (pPair settings (pCategory settings)) `sepEndBy1` pNewline
   let (categories, ys) = unzip lst
   return $ zip3 categories (map fromInteger [1..]) ys
 
-pTwoColumnsWithCategories :: Maybe Char -> Parser [(String, AnyNumber, AnyNumber)]
-pTwoColumnsWithCategories mbSep =
-  try (pTriplet mbSep) `sepEndBy1` pNewline
+pTwoColumnsWithCategories :: ParserSettings -> Parser [(String, AnyNumber, AnyNumber)]
+pTwoColumnsWithCategories settings =
+  try (pTriplet settings) `sepEndBy1` pNewline
 
-pColumns :: Maybe Char ->  Parser [(AnyNumber, AnyNumber)]
-pColumns mbSep = do
-  x <- choice $ map try [pTwoColumns mbSep, pOneColumn]
+pColumns :: ParserSettings ->  Parser [(AnyNumber, AnyNumber)]
+pColumns settings = do
+  x <- choice $ map try [pTwoColumns settings, pOneColumn settings]
   eof
   return x
 
-pColumnsWithCategories :: Maybe Char -> Parser [(String, AnyNumber, AnyNumber)]
-pColumnsWithCategories mbSep = do
-  x <- choice $ map try [pTwoColumnsWithCategories mbSep, pOneColumnWithCategories mbSep]
+pColumnsWithCategories :: ParserSettings -> Parser [(String, AnyNumber, AnyNumber)]
+pColumnsWithCategories settings = do
+  x <- choice $ map try [pTwoColumnsWithCategories settings, pOneColumnWithCategories settings]
   eof
   return x
 
-parseColumns :: Maybe Char -> String -> RegressionInput
-parseColumns mbSep s =
+parseColumns :: ParserSettings -> String -> RegressionInput
+parseColumns settings s =
   let s' = if last s `elem` "\r\n"
              then init s
              else s
-  in case parse (pColumns mbSep) "stdin" s' of
+  in case parse (pColumns settings) "stdin" s' of
       Right d -> let (xs, ys) = unzip d
                  in  M.singleton "input" $ DataSeries xs ys
       Left e -> error $ show e
 
-parseColumnsWithCategories :: Maybe Char -> String -> RegressionInput
-parseColumnsWithCategories mbSep s =
+parseColumnsWithCategories :: ParserSettings -> String -> RegressionInput
+parseColumnsWithCategories settings s =
   let s' = if last s `elem` "\r\n"
              then init s
              else s
@@ -121,7 +128,7 @@ parseColumnsWithCategories mbSep s =
 
       append (DataSeries xs1 ys1) (DataSeries xs2 ys2) = DataSeries (xs1 ++ xs2) (ys1 ++ ys2)
 
-  in case parse (pColumnsWithCategories mbSep) "stdin" s' of
+  in case parse (pColumnsWithCategories settings) "stdin" s' of
       Left e -> error $ show e
       Right d -> preprocess M.empty d
 
