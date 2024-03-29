@@ -1,7 +1,7 @@
 {-# LANGUAGE PatternGuards #-}
 
 module Math
-  (getInfo, predict, subTrend, randoms)
+  (calculate, predict, subTrend, randoms)
   where
 
 import Control.Monad
@@ -55,16 +55,16 @@ mls system n xs ys =
                   _ -> error "Unexpected number of coefficients!"
   in  (Number a,Number b, Number c)
 
-getInfo :: Int -> Formula -> [AnyNumber] -> [AnyNumber] -> Info 
-getInfo n f xs ys | Auto <- f = 
-  let infoL = getInfo' n Linear xs ys
-      infoS = getInfo' n Square xs ys
-      infoE = getInfo' n Exponent xs ys
+calculate :: Int -> Formula -> [AnyNumber] -> [AnyNumber] -> RegressionResult 
+calculate n f xs ys | Auto <- f = 
+  let infoL = calculate' n Linear xs ys
+      infoS = calculate' n Square xs ys
+      infoE = calculate' n Exponent xs ys
   in  minimumBy (compare `on` stdDev) [infoL, infoS, infoE]
-                  | otherwise = getInfo' n f xs ys
+                  | otherwise = calculate' n f xs ys
 
-getInfo' :: Int -> Formula -> [AnyNumber] -> [AnyNumber] -> Info 
-getInfo' n f xs ys = Info xs ys ts a b c formula
+calculate' :: Int -> Formula -> [AnyNumber] -> [AnyNumber] -> RegressionResult 
+calculate' n f xs ys = RegressionResult xs ys ts a b c formula
   where
     (a,b,c) = mls system n xs ys
     ts      = map formula xs
@@ -74,12 +74,12 @@ getInfo' n f xs ys = Info xs ys ts a b c formula
         Square -> (systemSquare, square a b c)
         Exponent -> (systemExponent, exponential a b)
 
-avgStep :: Info -> AnyNumber
+avgStep :: RegressionResult -> AnyNumber
 avgStep info = 
   let s = zipWith (-) (tail $ xvals info) (xvals info)
   in  ((sum s)/(fromIntegral $ length s))
 
-stdDev :: Info -> AnyNumber
+stdDev :: RegressionResult -> AnyNumber
 stdDev info = 
   let ts = trend info
       ys = yvals info
@@ -101,8 +101,8 @@ randomsD s n = replicateM n $ do
   r2 <- randomIO
   return $ s * cos(2*pi*r1)*sqrt(-2*log(r2))
 
-predict :: Int -> Bool -> Info -> IO Info
-predict n r info@(Info xs ys ts a b c func) = do
+predict :: Int -> Bool -> RegressionResult -> IO RegressionResult
+predict n r info@(RegressionResult xs ys ts a b c func) = do
   let st = avgStep info
       xs' = take n $ tail $ iterate (+st) (last xs)
       ys' = map func xs'
@@ -110,10 +110,10 @@ predict n r info@(Info xs ys ts a b c func) = do
          then randoms (stdDev info) n
          else return $ replicate n 0
   let ys'' = zipWith (+) ys' rs
-  return $ Info (xs++xs') (ys++ys'') (ts++ys') a b c func
+  return $ RegressionResult (xs++xs') (ys++ys'') (ts++ys') a b c func
 
-subTrend :: Info -> Info
-subTrend (Info xs ys ts a b c f) = Info xs ys' ts a b c f
+subTrend :: RegressionResult -> RegressionResult
+subTrend (RegressionResult xs ys ts a b c f) = RegressionResult xs ys' ts a b c f
   where
     ys' = zipWith (-) ys ts
 

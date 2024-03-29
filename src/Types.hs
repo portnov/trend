@@ -82,7 +82,7 @@ data Formula = Linear
 
 data CmdLine = CmdLine Mode Formula FilePath
 
-data Info = Info {
+data RegressionResult = RegressionResult {
              xvals :: [AnyNumber],
              yvals :: [AnyNumber],
              trend :: [AnyNumber],
