@@ -52,6 +52,18 @@ cmdline = CmdLine
                   <> metavar "YYYY-MM-DD"
                 )
             )
+        <*> allowDates
+
+    allowDates =
+          flag' True
+            ( long "dates"
+              <> help "Allow date values (default)"
+            )
+      <|> flag' False
+            ( long "no-dates"
+              <> help "Allow only numeric values"
+            )
+      <|> pure True
 
     outputSettings = OutputSettings
       <$> optional (

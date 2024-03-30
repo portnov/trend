@@ -90,7 +90,8 @@ data Formula = Linear
 data ParserSettings =
   ParserSettings {
     psSeparator :: !(Maybe Char),
-    psDateFormat :: !(Maybe Format)
+    psDateFormat :: !(Maybe Format),
+    psAllowDates :: !Bool
   }
   deriving (Show)
 

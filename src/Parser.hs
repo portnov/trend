@@ -43,12 +43,14 @@ pMantiss = do
   return $ (readAnyNumber i) + (readAnyNumber m)/(10^n)
 
 pAnyNumber :: ParserSettings -> Parser AnyNumber
-pAnyNumber settings =
-  let now = unsafePerformIO getCurrentDateTime
-      dateParser = case psDateFormat settings of
-                     Nothing -> pDateTime now
-                     Just fmt -> formatParser fmt
-  in (try $ Date `fmap` dateParser) <|> pNumber
+pAnyNumber settings
+  | psAllowDates settings =
+      let now = unsafePerformIO getCurrentDateTime
+          dateParser = case psDateFormat settings of
+                         Nothing -> pDateTime now
+                         Just fmt -> formatParser fmt
+      in (try $ Date `fmap` dateParser) <|> pNumber
+  | otherwise = pNumber
 
 pPair :: ParserSettings -> Parser a -> Parser (a, AnyNumber)
 pPair settings pFirst = do
