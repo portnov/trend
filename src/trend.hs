@@ -15,11 +15,13 @@ readFile' x = readFile x
 
 outSeparator settings = [fromMaybe '\t' (osSeparator settings)]
 
-printCoefs printFormula settings result = do
+printCoefs printFormula printC settings result = do
   let sep = outSeparator settings
   when printFormula $
     putStr $ show (resFormula result) ++ sep
-  putStr $ show (coefA result) ++ sep ++ show (coefB result) ++ sep ++ show (coefC result)
+  if printC
+    then putStr $ show (coefA result) ++ sep ++ show (coefB result) ++ sep ++ show (coefC result)
+    else putStr $ show (coefA result) ++ sep ++ show (coefB result)
   when (osStdDev settings) $
     putStr $ sep ++ (show $ stdDev result)
   putStrLn ""
@@ -60,7 +62,7 @@ main = do
 
   let info = calculateMany (clFormula cmdline) input
       printer = case clMode cmdline of
-                  Coefs -> printCoefs (clFormula cmdline == Auto)
+                  Coefs -> printCoefs (clFormula cmdline == Auto) (clFormula cmdline == Square)
                   TrendColumn -> printTrend
                   SubTrend -> printSub
                   Predict _ _ -> printTrend
