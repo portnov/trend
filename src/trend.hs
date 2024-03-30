@@ -1,5 +1,6 @@
 
 import Control.Monad
+import Data.Maybe
 import qualified Data.Map as M
 import System.Environment (getArgs)
 import Options.Applicative
@@ -12,30 +13,38 @@ import CmdLine
 readFile' "-" = getContents
 readFile' x = readFile x
 
+outSeparator settings = [fromMaybe '\t' (osSeparator settings)]
+
 printCoefs printFormula settings result = do
+  let sep = outSeparator settings
   when printFormula $
-    print $ resFormula result
-  putStrLn $ show (coefA result) ++ " " ++ show (coefB result) ++ " " ++ show (coefC result)
+    putStr $ show (resFormula result) ++ sep
+  putStr $ show (coefA result) ++ sep ++ show (coefB result) ++ sep ++ show (coefC result)
   when (osStdDev settings) $
-    print $ stdDev result
+    putStr $ sep ++ (show $ stdDev result)
+  putStrLn ""
 
 printTrend settings result = do
     sequence_ $ zipWith3 pr (xvals result) (yvals result) (trend result)
     when (osStdDev settings) $
       print $ stdDev result
+    putStrLn ""
   where
-    pr x y t = putStrLn $ show x ++ "\t" ++ show y ++ "\t" ++ show t
+    pr x y t = putStrLn $ show x ++ sep ++ show y ++ sep ++ show t
+    sep = outSeparator settings
 
 printSub settings result = do
     zipWithM_ pr (xvals result) (yvals result)
     when (osStdDev settings) $
       print $ stdDev result
+    putStrLn ""
   where
-    pr x y = putStrLn $ show x ++ "\t" ++ show y
+    pr x y = putStrLn $ show x ++ sep ++ show y
+    sep = outSeparator settings
 
 
 main = do
-  cmdline <- execParser parserInfo
+  cmdline <- preprocessCmdline <$> execParser parserInfo
   let parser = if clByCategory cmdline
                  then parseColumnsWithCategories
                  else parseColumns
@@ -61,7 +70,9 @@ main = do
                    info = res M.! key
                in  printer (clOutput cmdline) info
           _ -> forM_ (M.assocs res) $ \(category, info) -> do
-                 putStr $ category ++ "\t"
+                 case clMode cmdline of
+                   Coefs -> putStr $ category ++ (outSeparator $ clOutput cmdline)
+                   _ -> putStrLn $ "# " ++ category
                  printer (clOutput cmdline) info
   info' <- case clMode cmdline of
             SubTrend -> return $ subTrendMany info

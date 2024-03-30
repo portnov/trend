@@ -21,6 +21,12 @@ dateFormat = eitherReader $ \str ->
     Right fmt -> Right fmt
     Left err -> Left $ show err
 
+preprocessCmdline :: CmdLine -> CmdLine
+preprocessCmdline c =
+  case (psSeparator (clParser c), osSeparator (clOutput c)) of
+    (Just sep, Nothing) -> c {clOutput = (clOutput c) {osSeparator = Just sep}}
+    _ -> c
+
 cmdline :: Parser CmdLine
 cmdline = CmdLine
             <$> parserSettings
@@ -48,7 +54,14 @@ cmdline = CmdLine
             )
 
     outputSettings = OutputSettings
-      <$> switch
+      <$> optional (
+            option char
+              ( long "output-delimiter"
+                <> metavar "D"
+                <> help "specify delimiter of values within each row for output"
+              )
+            )
+      <*> switch
             ( long "print-error"
               <> short 'e'
               <> help "print average error estimation")

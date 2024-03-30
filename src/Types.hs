@@ -95,7 +95,8 @@ data ParserSettings =
   deriving (Show)
 
 data OutputSettings = OutputSettings {
-    osStdDev :: Bool
+    osSeparator :: !(Maybe Char),
+    osStdDev :: !Bool
   }
   deriving (Show)
 
