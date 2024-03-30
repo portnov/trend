@@ -63,14 +63,15 @@ calculateMany f input = M.mapMaybe calculateSeries input
     calculateSeries ds = calculate (length $ dsX ds) f ds
 
 calculate :: Int -> Formula -> DataSeries -> Maybe RegressionResult 
-calculate n f ds | Auto <- f = 
+calculate n Auto ds =
   let infoL = calculate' n Linear ds
       infoS = calculate' n Square ds
       infoE = calculate' n Exponent ds
       stdDev' Nothing = 0
       stdDev' (Just res) = stdDev res
-  in  minimumBy (compare `on` stdDev') [infoL, infoS, infoE]
-                  | otherwise = calculate' n f ds
+      result = minimumBy (compare `on` stdDev') [infoL, infoS, infoE]
+  in  result
+calculate n f ds = calculate' n f ds
 
 calculate' :: Int -> Formula -> DataSeries -> Maybe RegressionResult 
 calculate' n f ds@(DataSeries xs ys) =
@@ -82,7 +83,7 @@ calculate' n f ds@(DataSeries xs ys) =
                         Square -> square a b c
                         Exponent -> exponential a b
             ts = map formula xs
-        in  Just $ RegressionResult xs ys ts a b c formula
+        in  Just $ RegressionResult xs ys ts a b c f formula
   where
     system = case f of
                Linear -> systemLinear
@@ -117,7 +118,7 @@ randomsD s n = replicateM n $ do
   return $ s * cos(2*pi*r1)*sqrt(-2*log(r2))
 
 predict :: Int -> Bool -> RegressionResult -> IO RegressionResult
-predict n r info@(RegressionResult xs ys ts a b c func) = do
+predict n r info@(RegressionResult xs ys ts a b c fr func) = do
   let st = avgStep info
       xs' = take n $ tail $ iterate (+st) (last xs)
       ys' = map func xs'
@@ -125,7 +126,7 @@ predict n r info@(RegressionResult xs ys ts a b c func) = do
          then randoms (stdDev info) n
          else return $ replicate n 0
   let ys'' = zipWith (+) ys' rs
-  return $ RegressionResult (xs++xs') (ys++ys'') (ts++ys') a b c func
+  return $ RegressionResult (xs++xs') (ys++ys'') (ts++ys') a b c fr func
 
 predictMany :: Int -> Bool -> M.Map String RegressionResult -> IO (M.Map String RegressionResult)
 predictMany n r result = do
@@ -135,7 +136,7 @@ predictMany n r result = do
   return $ M.fromList result'
 
 subTrend :: RegressionResult -> RegressionResult
-subTrend (RegressionResult xs ys ts a b c f) = RegressionResult xs ys' ts a b c f
+subTrend (RegressionResult xs ys ts a b c fr f) = RegressionResult xs ys' ts a b c fr f
   where
     ys' = zipWith (-) ys ts
 

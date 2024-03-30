@@ -85,7 +85,7 @@ data Formula = Linear
              | Square
              | Exponent
              | Auto
-  deriving (Show)
+  deriving (Show, Eq)
 
 data ParserSettings =
   ParserSettings {
@@ -112,10 +112,11 @@ data CmdLine = CmdLine {
 data RegressionResult = RegressionResult {
              xvals :: ![AnyNumber],
              yvals :: ![AnyNumber],
-             trend :: ![AnyNumber],
-             coefA :: !AnyNumber,
-             coefB :: !AnyNumber,
-             coefC :: !AnyNumber,
+             trend :: [AnyNumber],
+             coefA :: AnyNumber,
+             coefB :: AnyNumber,
+             coefC :: AnyNumber,
+             resFormula :: !Formula,
              func :: AnyNumber -> AnyNumber }
 
 data DataSeries = DataSeries {

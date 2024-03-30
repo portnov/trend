@@ -12,7 +12,9 @@ import CmdLine
 readFile' "-" = getContents
 readFile' x = readFile x
 
-printCoefs settings result = do
+printCoefs printFormula settings result = do
+  when printFormula $
+    print $ resFormula result
   putStrLn $ show (coefA result) ++ " " ++ show (coefB result) ++ " " ++ show (coefC result)
   when (osStdDev settings) $
     print $ stdDev result
@@ -49,7 +51,7 @@ main = do
 
   let info = calculateMany (clFormula cmdline) input
       printer = case clMode cmdline of
-                  Coefs -> printCoefs
+                  Coefs -> printCoefs (clFormula cmdline == Auto)
                   TrendColumn -> printTrend
                   SubTrend -> printSub
                   Predict _ _ -> printTrend
