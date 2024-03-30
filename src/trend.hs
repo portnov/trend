@@ -12,23 +12,32 @@ import CmdLine
 readFile' "-" = getContents
 readFile' x = readFile x
 
-printCoefs (RegressionResult _ _ _ a b c _) = putStrLn $ show a ++ " " ++ show b ++ " " ++ show c
+printCoefs settings result = do
+  putStrLn $ show (coefA result) ++ " " ++ show (coefB result) ++ " " ++ show (coefC result)
+  when (osStdDev settings) $
+    print $ stdDev result
 
-printTrend (RegressionResult xs ys ts _ _ _ _) = sequence_ $ zipWith3 pr xs ys ts
+printTrend settings result = do
+    sequence_ $ zipWith3 pr (xvals result) (yvals result) (trend result)
+    when (osStdDev settings) $
+      print $ stdDev result
   where
     pr x y t = putStrLn $ show x ++ "\t" ++ show y ++ "\t" ++ show t
 
-printInfo (RegressionResult xs ys _ _ _ _ _) = sequence_ $ zipWith pr xs ys
+printSub settings result = do
+    zipWithM_ pr (xvals result) (yvals result)
+    when (osStdDev settings) $
+      print $ stdDev result
   where
     pr x y = putStrLn $ show x ++ "\t" ++ show y
 
 
 main = do
-  CmdLine mbSep byCategory mode formula file <- execParser parserInfo
-  let parser = if byCategory
+  cmdline <- execParser parserInfo
+  let parser = if clByCategory cmdline
                  then parseColumnsWithCategories
                  else parseColumns
-  input <- parser mbSep <$> readFile' file
+  input <- parser (clParser cmdline) <$> readFile' (clInput cmdline)
   {-forM_ (M.elems input) $ \ds -> do
     let n = length (dsX ds)
         a = systemLinear n ds
@@ -38,21 +47,21 @@ main = do
     print xs
     print $ zipWith (-) (tail xs) xs-}
 
-  let info = calculateMany formula input
-      printer = case mode of
+  let info = calculateMany (clFormula cmdline) input
+      printer = case clMode cmdline of
                   Coefs -> printCoefs
                   TrendColumn -> printTrend
-                  SubTrend -> printInfo
+                  SubTrend -> printSub
                   Predict _ _ -> printTrend
       printerMany res =
         case M.size res of
           1 -> let key = head (M.keys res)
                    info = res M.! key
-               in  printer info
+               in  printer (clOutput cmdline) info
           _ -> forM_ (M.assocs res) $ \(category, info) -> do
                  putStr $ category ++ "\t"
-                 printer info
-  info' <- case mode of
+                 printer (clOutput cmdline) info
+  info' <- case clMode cmdline of
             SubTrend -> return $ subTrendMany info
             Predict b n -> predictMany n b info
             _         -> return info

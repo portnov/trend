@@ -78,20 +78,36 @@ readAnyNumber s = Number $ fromIntegral (read s :: Int)
 data Mode = Coefs
           | TrendColumn
           | SubTrend
-          | Predict {randomize :: Bool, periods :: Int}
+          | Predict {randomize :: !Bool, periods :: !Int}
+  deriving (Show)
 
 data Formula = Linear
              | Square
              | Exponent
              | Auto
+  deriving (Show)
 
 data ParserSettings =
   ParserSettings {
-    psSeparator :: Maybe Char,
-    psDateFormat :: Maybe Format
+    psSeparator :: !(Maybe Char),
+    psDateFormat :: !(Maybe Format)
   }
+  deriving (Show)
 
-data CmdLine = CmdLine ParserSettings Bool Mode Formula FilePath
+data OutputSettings = OutputSettings {
+    osStdDev :: Bool
+  }
+  deriving (Show)
+
+data CmdLine = CmdLine {
+    clParser :: !ParserSettings,
+    clOutput :: !OutputSettings,
+    clByCategory :: !Bool,
+    clMode :: !Mode,
+    clFormula :: !Formula,
+    clInput :: !FilePath
+  }
+  deriving (Show)
 
 data RegressionResult = RegressionResult {
              xvals :: ![AnyNumber],

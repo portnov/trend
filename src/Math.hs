@@ -1,7 +1,7 @@
 {-# LANGUAGE PatternGuards #-}
 
 module Math
-  (calculateMany, predictMany, subTrendMany, randoms, systemLinear)
+  (calculateMany, predictMany, subTrendMany, randoms, stdDev)
   where
 
 import Control.Monad

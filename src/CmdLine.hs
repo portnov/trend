@@ -22,7 +22,13 @@ dateFormat = eitherReader $ \str ->
     Left err -> Left $ show err
 
 cmdline :: Parser CmdLine
-cmdline = CmdLine <$> parserSettings <*> byCategory <*> mode <*> formula <*> file
+cmdline = CmdLine
+            <$> parserSettings
+            <*> outputSettings
+            <*> byCategory
+            <*> mode
+            <*> formula
+            <*> file
   where
     parserSettings =
       ParserSettings
@@ -40,6 +46,12 @@ cmdline = CmdLine <$> parserSettings <*> byCategory <*> mode <*> formula <*> fil
                   <> metavar "YYYY-MM-DD"
                 )
             )
+
+    outputSettings = OutputSettings
+      <$> switch
+            ( long "print-error"
+              <> short 'e'
+              <> help "print average error estimation")
 
     byCategory =
       switch
